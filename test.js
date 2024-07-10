@@ -4,7 +4,7 @@ const readline = require("readline");
 const client = new CAINode();
 
 async function start() {
-  const token = "613982af86531a899af63e7a9042576c3097816b";  
+  const token = "YOUR_AUTH_TOKEN";  
   const login = await client.login(token);
 
   if (!login) {
@@ -13,11 +13,11 @@ async function start() {
 
   console.log("Client login:", login);
 
-  const con = await client.character.connect("5b0G10qbKz_echA7uD6WszQiPBuXiZywaiNuLefKEG4");
+  const con = await client.character.connect("YOUR_CHARACTER_ID");
 
   if (con) {
     console.log("Connected to character");
-    const info = await client.character.info("5b0G10qbKz_echA7uD6WszQiPBuXiZywaiNuLefKEG4");
+    const info = await client.character.info("YOUR_CHARACTER_ID");
     console.log(info);
   } else {
     console.log("Connection failed");

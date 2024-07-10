@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../static/styles.css">
+    <title>CAI Auth Token</title>
+    <script>
+        async function sendCode() {
+            const email = document.getElementById('email').value;
+            const statusElement = document.getElementById('status');
+
+            if (!email) {
+                statusElement.innerText = 'Email is required!';
+                statusElement.style.color = '#FF7965'; // Red for missing email
+                return; // Exit the function early
+            }
+
+            const response = await fetch('/send_code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email })
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                if (data.code === true) {
+                    statusElement.innerText = `Code Sent Successfully. Copy The Link From Your Email`;
+                    statusElement.style.color = '#00F397'; // Green for success
+                } else {
+                    statusElement.innerText = `Code Not Sent!!`;
+                    statusElement.style.color = '#FF7965'; // Red for failure
+                } 
+            } else {
+                statusElement.innerText = `Error: ${data.error}`;
+                statusElement.style.color = '#FFA64E'; // Orange for errors
+            }
+        }
+
+        async function generateToken() {
+            const email = document.getElementById('email').value;
+            const link = document.getElementById('link').value;
+            const tokenElement = document.getElementById('token');
+
+            if (!email || !link) {
+                tokenElement.innerHTML = 'Both Email and Link are required!';
+                tokenElement.style.color = '#FF7965'; // Red for missing email or link
+                return; // Exit the function early
+            }
+
+            const response = await fetch('/generate_token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email, link })
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                tokenElement.innerHTML = `Your token:&nbsp;<span id="tokenValue">${data.token}</span>&nbsp;<button onclick="copyToken()">Copy</button>`;
+                tokenElement.style.color = "#A5D6FF"; 
+            } else {
+                tokenElement.innerHTML = `Error: ${data.error}`;
+                tokenElement.style.color = "#FF7965";
+            }
+        }
+
+        function copyToken() {
+            const token = document.getElementById('tokenValue').innerText;
+            navigator.clipboard.writeText(token).then(() => {
+                alert('Token copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy token: ', err);
+            });
+        }
+    </script>
+</head>
+<body>
+    <div class="main-container">
+        <div class="header"><h1>&nbsp;&nbsp;Get Character AI Auth Token&nbsp;&nbsp;</h1></div>
+        <div class="get-data">
+            <div class="data-collection">
+                <span class="text-default">&nbsp;&nbsp;&nbsp;&nbsp;Enter Character AI Email&nbsp;&nbsp;</span>
+                <input id="email" type="text">
+                &nbsp;&nbsp;
+                <button onclick="sendCode()">Send Code</button>
+                &nbsp;&nbsp;
+            </div>
+            <div class="status" id="status"></div>
+            <div class="data-collection">
+                <span class="text-default">&nbsp;&nbsp;&nbsp;&nbsp;Enter Link From Email&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                <input id="link" type="text">
+                &nbsp;&nbsp;
+                <button onclick="generateToken()">Generate Token</button>
+                &nbsp;&nbsp;
+            </div>
+            <div class="token" id="token"></div>
+        </div>
+    </div>
+</body>
+</html>

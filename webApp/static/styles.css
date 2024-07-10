@@ -1,0 +1,97 @@
+body{
+    display: flex;
+    justify-content: center;
+    background-color: rgb(13,17,23);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 15px;
+}
+input{
+    background-color: rgb(22,27,34);
+    color: rgb(161,205,234);
+    border: 1px solid rgb(48,54,61);
+    border-radius: 5px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: medium;
+}
+button{
+    background-color: rgb(1,4,9);
+    color: rgb(230,237,243);
+    border: 1px solid rgb(48,54,61);
+    border-radius: 5px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+button:hover{
+    background-color: rgb(230,237,243);
+    color: rgb(1,4,9);
+}
+.text-default{
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: rgb(230,237,243);
+}
+.main-container{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid rgb(48,54,61);
+    border-radius: 5px;
+    margin-top: 10%;
+    flex-direction: column;
+}
+.header{  
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: rgb(230,237,243);
+    border-bottom: 1px solid rgb(48,54,61);
+    background-color: rgb(22,27,34);
+    width: 100%;
+}
+.header h1{
+    font-weight: 500;
+}
+.data-collection{
+    margin: 15px;
+    margin-left: 0;
+    margin-right: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgb(48,54,61);
+    width: 100%;
+}
+.status{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgb(48,54,61);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: rgb(230,237,243);
+}
+.token{
+    display: flex;
+    justify-content: center;
+    padding-bottom: 5px;
+    align-items: center;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: rgb(230,237,243);
+}
+
+@media(max-width: 600px){
+    body{
+        font-size: 12px;
+    }
+    button{
+        margin-top: 10px;
+        margin-left: 35%;
+    }
+    .token{
+        font-size: small;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+}
