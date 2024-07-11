@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../static/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <title>CAI Auth Token</title>
     <script>
         async function sendCode() {
@@ -39,34 +40,144 @@
             }
         }
 
-        async function generateToken() {
-            const email = document.getElementById('email').value;
-            const link = document.getElementById('link').value;
-            const tokenElement = document.getElementById('token');
+        async function getSearchResults() {
+    const searchTerm = document.getElementById("queryBar").value;
+    const resultsContainer = document.getElementById("queryResults");
+    resultsContainer.innerHTML = ''; // Clear previous results
 
-            if (!email || !link) {
-                tokenElement.innerHTML = 'Both Email and Link are required!';
-                tokenElement.style.color = '#FF7965'; // Red for missing email or link
-                return; // Exit the function early
-            }
+    try {
+        const response = await fetch('http://localhost:5132/get_search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ searchKey: searchTerm })
+        });
 
-            const response = await fetch('/generate_token', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ email, link })
+        if (!response.ok) {
+            throw new Error(`Error sending request to Express server: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log('Express server response:', result);
+
+        if (result.characters && result.characters.length > 0) {
+            result.characters.forEach(character => {
+                const characterElement = document.createElement('div');
+                characterElement.classList.add('character');
+
+                const characterHeader = document.createElement('div');
+                characterHeader.classList.add('character-header');
+
+                const imgElement = document.createElement('img');
+                imgElement.src = character.pfp;
+                imgElement.alt = character.name;
+                imgElement.classList.add('character-image');
+                characterHeader.appendChild(imgElement);
+
+                const nameElement = document.createElement('h3');
+                nameElement.innerText = character.name;
+                characterHeader.appendChild(nameElement);
+
+                characterElement.appendChild(characterHeader);
+
+                const idElement = document.createElement('p');
+                idElement.innerText = `ID: ${character.id}`;
+                characterElement.appendChild(idElement);
+
+                const popularityElement = document.createElement('p');
+                popularityElement.innerText = `Popularity: ${character.popularity}`;
+                characterElement.appendChild(popularityElement);
+
+                resultsContainer.appendChild(characterElement);
             });
-            const data = await response.json();
+        } else {
+            resultsContainer.innerHTML = 'No results found.';
+        }
+    } catch (error) {
+        console.error("Error: ", error);
+        resultsContainer.innerHTML = 'Error fetching results.';
+    }
+}
 
-            if (response.ok) {
-                tokenElement.innerHTML = `Your token:&nbsp;<span id="tokenValue">${data.token}</span>&nbsp;<button onclick="copyToken()">Copy</button>`;
-                tokenElement.style.color = "#A5D6FF"; 
-            } else {
-                tokenElement.innerHTML = `Error: ${data.error}`;
-                tokenElement.style.color = "#FF7965";
+
+        async function sendTokenToExpressServer(token) {
+            try {
+                const response = await fetch('http://localhost:5132/receive_token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error sending token to Express server: ${response.statusText}`);
+                }else{
+                    console.log("token sent")
+                }
+
+                const result = await response.json();
+                console.log('Express server response:', result);
+            } catch (error) {
+                console.error('Error:', error);
             }
         }
+
+        async function getSearchResults() {
+            const searchTerm = document.getElementById("queryBar").value;
+            const resultsContainer = document.getElementById("queryResults");
+            resultsContainer.innerHTML = ''; // Clear previous results
+
+            try {
+                const response = await fetch('http://localhost:5132/get_search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ searchKey: searchTerm })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error sending request to Express server: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log('Express server response:', result);
+
+                if (result.characters && result.characters.length > 0) {
+                    result.characters.forEach(character => {
+                        const characterElement = document.createElement('div');
+                        characterElement.classList.add('character');
+
+                        const imgElement = document.createElement('img');
+                        imgElement.src = character.pfp;
+                        imgElement.alt = character.name;
+                        imgElement.classList.add('character-image');
+                        characterElement.appendChild(imgElement);
+
+                        const nameElement = document.createElement('h3');
+                        nameElement.innerText = character.name;
+                        characterElement.appendChild(nameElement);
+
+                        const idElement = document.createElement('p');
+                        idElement.innerText = `ID: ${character.id}`;
+                        characterElement.appendChild(idElement);
+
+                        const popularityElement = document.createElement('p');
+                        popularityElement.innerText = `Popularity: ${character.popularity}`;
+                        characterElement.appendChild(popularityElement);
+
+                        resultsContainer.appendChild(characterElement);
+                    });
+                } else {
+                    resultsContainer.innerHTML = 'No results found.';
+                }
+            } catch (error) {
+                console.error("Error: ", error);
+                resultsContainer.innerHTML = 'Error fetching results.';
+            }
+        }   
 
         function copyToken() {
             const token = document.getElementById('tokenValue').innerText;
@@ -79,7 +190,7 @@
     </script>
 </head>
 <body>
-    <div class="main-container">
+    <div class="container">
         <div class="header"><h1>&nbsp;&nbsp;Get Character AI Auth Token&nbsp;&nbsp;</h1></div>
         <div class="get-data">
             <div class="data-collection">
@@ -99,6 +210,17 @@
             </div>
             <div class="token" id="token"></div>
         </div>
+    </div>
+    <div class="search-div">
+        <div class="header"><h1>&nbsp;&nbsp;Search Characters&nbsp;&nbsp;</h1></div>
+        <div>
+            <div class="search-container">
+                <input type="text" id="queryBar" class="search-bar" placeholder="Search Character">
+                <i class="fas fa-search search-icon"></i>
+            </div>
+            <button id="search" onclick="getSearchResults()">Search</button>
+        </div>
+        <div id ="queryResults" class="search-results"></div>
     </div>
 </body>
 </html>
