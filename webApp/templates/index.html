@@ -17,6 +17,8 @@
                 return; 
             }
 
+            showSpinner('status');
+
             const response = await fetch('/send_code', {
                 method: 'POST',
                 headers: {
@@ -25,6 +27,9 @@
                 body: JSON.stringify({ email })
             });
             const data = await response.json();
+
+            hideSpinner('status');
+            
 
             if (response.ok) {
                 if (data.code === true) {
@@ -49,6 +54,9 @@
                 tokenElement.style.color = '#FF7965'; 
                 return; 
             }
+
+            showSpinner('token');
+
             const response = await fetch('/generate_token', {
                 method: 'POST',
                 headers: {
@@ -56,6 +64,9 @@
                 },
                 body: JSON.stringify({ email, link })
             });
+
+            hideSpinner('token');
+
             const data = await response.json();
             if (response.ok) {
                 tokenElement.innerHTML = `Your token:&nbsp;<span id="tokenValue">${data.token}</span>&nbsp;<button onclick="copyToken()" class = "fas fa-copy cpy-btn"></button>`;
@@ -117,10 +128,27 @@
       if (overlay) overlay.remove();
     }
 
+    function showSpinner(targetElementId) {
+    const targetElement = document.getElementById(targetElementId);
+    const spinner = document.createElement('div');
+    spinner.className = 'spinner';
+    spinner.id = `${targetElementId}-spinner`;
+    targetElement.appendChild(spinner);
+}
+
+function hideSpinner(targetElementId) {
+    const spinner = document.getElementById(`${targetElementId}-spinner`);
+    if (spinner) {
+        spinner.remove();
+    }
+}
+
         async function getSearchResults() {
     const searchTerm = document.getElementById("queryBar").value;
     const resultsContainer = document.getElementById("queryResults");
     resultsContainer.innerHTML = ''; 
+  
+    showSpinner('queryResults');
 
     try {
         const response = await fetch('http://localhost:5132/get_search', {
@@ -134,6 +162,8 @@
         if (!response.ok) {
             throw new Error(`Error sending request to Express server: ${response.statusText}`);
         }
+
+        hideSpinner('queryResults')
 
         const result = await response.json();
         console.log('Express server response:', result);
