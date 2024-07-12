@@ -101,20 +101,16 @@
         }
         
         function showCustomAlert(message, duration = 3000) {
-      // Create overlay
       const overlay = document.createElement('div');
       overlay.className = 'alert-overlay';
 
-      // Create alert box
       const alertBox = document.createElement('div');
       alertBox.className = 'alert-box';
       alertBox.innerHTML = `<div>${message}</div>`;
 
-      // Append overlay and alert box to body
       document.body.appendChild(overlay);
       document.body.appendChild(alertBox);
 
-      // Automatically remove the alert box after the specified duration
       setTimeout(() => {
         removeAlert();
       }, duration);
