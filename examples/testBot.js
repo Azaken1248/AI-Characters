@@ -80,9 +80,7 @@ function filterMessage(message) {
     return matches.join(', ');
 }
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
+
 
 
 const clientDC = new Client({
