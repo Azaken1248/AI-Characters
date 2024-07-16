@@ -28,7 +28,8 @@ function getMinAndMaxScores(characters) {
 async function debug(){
     const login = await client.login("613982af86531a899af63e7a9042576c3097816b");
     if(login){
-        //const info = await client.character.info("5b0G10qbKz_echA7uD6WszQiPBuXiZywaiNuLefKEG4")  -> this is sengoku nadeko :D
+        const info = await client.character.info("5b0G10qbKz_echA7uD6WszQiPBuXiZywaiNuLefKEG4")  //-> this is sengoku nadeko :D
+        console.log(info)
         //const data = info["character"]["name"]
         const searchResults = await client.character.search("Sengoku Nadeko")
         

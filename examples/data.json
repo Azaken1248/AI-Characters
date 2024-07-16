@@ -8,10 +8,10 @@
       "avatar_file_name": "uploaded/2022/12/16/Zdi8LOIDs51wq_U1qshhATv6kwafcfHIZcAqRMSe1AU.webp",
       "visibility": "PUBLIC",
       "participant__name": "Sengoku Nadeko",
-      "participant__num_interactions": 59626,
+      "participant__num_interactions": 60349,
       "user__username": "Zmash",
       "priority": 0,
-      "search_score": 349.1899
+      "search_score": 344.70273
     },
     {
       "document_id": "fddd27c1-98b5-4310-8e50-7b3bf69fb7dc",
@@ -24,7 +24,7 @@
       "participant__num_interactions": 2266,
       "user__username": "Seiharu",
       "priority": 0,
-      "search_score": 337.74612
+      "search_score": 333.21677
     },
     {
       "document_id": "c6230abd-50c1-4afe-bb52-2618192622ba",
@@ -37,20 +37,7 @@
       "participant__num_interactions": 162,
       "user__username": "MikhailovAnton71",
       "priority": 0,
-      "search_score": 328.5325
-    },
-    {
-      "document_id": "6a2a7a79-7891-4e74-af8b-e88278ee8098",
-      "external_id": "vk_8DiegVkxqqPJYsDb7XubhAuz-FyBVL3_70JrNb1w",
-      "title": "Sengoku Nadeko é uma personagem da série \"Monogata",
-      "greeting": "O-Oi",
-      "avatar_file_name": "uploaded/2024/7/3/WWj7ZpIf_Pf4NcaApZafNGWN5JlyUj1z8EIc9OXVrGw.webp",
-      "visibility": "PUBLIC",
-      "participant__name": "Sengoku nadeko",
-      "participant__num_interactions": 0,
-      "user__username": "fugook1",
-      "priority": 0,
-      "search_score": 305.58606
+      "search_score": 324.00314
     },
     {
       "document_id": "477f3942-c335-423e-b74f-d349b730a729",
@@ -60,10 +47,10 @@
       "avatar_file_name": "uploaded/2022/12/10/l3ulMDnpI-eO4GHV_IekE2VW4hgZyfjlnCmg9RPQQwE.webp",
       "visibility": "PUBLIC",
       "participant__name": "Nadeko Sengoku",
-      "participant__num_interactions": 39551,
+      "participant__num_interactions": 40279,
       "user__username": "StableOtto",
       "priority": 0,
-      "search_score": 87.03002
+      "search_score": 87.20343
     },
     {
       "document_id": "cc33b137-9649-4c1c-9b8e-b68127eb877b",
@@ -76,7 +63,7 @@
       "participant__num_interactions": 6588,
       "user__username": "Heroines666lovejapan",
       "priority": 0,
-      "search_score": 80.75727
+      "search_score": 80.866844
     },
     {
       "document_id": "87a76d1e-5c38-441d-a7ad-5d120b83b4cd",
@@ -86,10 +73,10 @@
       "avatar_file_name": "uploaded/2024/6/11/p7mkx7HtOVyQxwEOTYAkyDO90kGbIGoM2SuJWSgANTs.webp",
       "visibility": "PUBLIC",
       "participant__name": "Nadeko Sengoku",
-      "participant__num_interactions": 3512,
+      "participant__num_interactions": 3558,
       "user__username": "Nijikat",
       "priority": 0,
-      "search_score": 78.556015
+      "search_score": 78.71112
     },
     {
       "document_id": "1c9e9adf-ad0e-4566-babb-fe07e62e999d",
@@ -102,7 +89,7 @@
       "participant__num_interactions": 2465,
       "user__username": "Chickenguy_ae21",
       "priority": 0,
-      "search_score": 77.31746
+      "search_score": 77.42703
     },
     {
       "document_id": "80a21977-7307-4e26-a896-0dff7dac84ed",
@@ -115,7 +102,7 @@
       "participant__num_interactions": 2018,
       "user__username": "haideroo",
       "priority": 0,
-      "search_score": 76.61748
+      "search_score": 76.72705
     },
     {
       "document_id": "3eb55de2-16b8-4aec-a6eb-3d6a5aa35fe2",
@@ -128,7 +115,7 @@
       "participant__num_interactions": 1109,
       "user__username": "lovelivenadeko",
       "priority": 0,
-      "search_score": 75.012886
+      "search_score": 74.33134
     },
     {
       "document_id": "9fc984c3-8e5b-4b3b-b991-d06414a3d752",
@@ -141,7 +128,7 @@
       "participant__num_interactions": 77,
       "user__username": "haideroo",
       "priority": 0,
-      "search_score": 65.229706
+      "search_score": 65.33928
     },
     {
       "document_id": "dbcb3b5e-54b1-49b4-a21c-9739c1dc0971",
@@ -154,8 +141,8 @@
       "participant__num_interactions": 2,
       "user__username": "Leonidasgopro",
       "priority": 0,
-      "search_score": 45.1749
+      "search_score": 44.64186
     }
   ],
-  "request_id": "5VnkTWsOTheNngO9ypIWyA"
+  "request_id": "lFShwZPDTUmUXL482sj11Q"
 }
