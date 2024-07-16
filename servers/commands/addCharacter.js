@@ -1,5 +1,5 @@
+const fs = require('fs');
 const CAINode = require('cainode');
-require('dotenv').config();
 
 function filterMessage(message) {
     const regex = /(\*[^*]*\*)|([^*]+)/g;
@@ -17,6 +17,38 @@ function filterMessage(message) {
     
     return matches.join(', ');
 }
+
+function saveWebhook(channelId, webhookData, characterID) {
+    let webhooks = {};
+    if (fs.existsSync('webhooks.json')) {
+        webhooks = JSON.parse(fs.readFileSync('webhooks.json', 'utf8') || '{}');
+    }
+    webhooks[channelId] = { ...webhookData, characterID };
+    fs.writeFileSync('webhooks.json', JSON.stringify(webhooks, null, 2));
+}
+
+
+
+async function loadWebhooks(clientCAI) {
+    if (!fs.existsSync('webhooks.json')) {
+        return {};
+    }
+    const webhooks = JSON.parse(fs.readFileSync('webhooks.json', 'utf8') || '{}');
+    
+    for (const channelId in webhooks) {
+        const { characterID } = webhooks[channelId];
+        if (characterID) {
+            try {
+                await clientCAI.character.connect(characterID);
+            } catch (error) {
+                console.error(`Failed to connect to character ${characterID}:`, error);
+            }
+        }
+    }
+
+    return webhooks;
+}
+
 
 module.exports = {
     name: "addCharacter",
@@ -53,33 +85,36 @@ module.exports = {
             const channel = message.channel;
             let webhook;
 
-            try {
-                webhook = await channel.createWebhook({
-                    name: uname,
-                    reason: "",
-                });
-                console.log("Created BOT Successfully");
-            } catch (error) {
-                console.error("Failed to create webhook:", error);
-                return message.reply("Failed to create webhook.");
+            const existingWebhooks = await loadWebhooks(clientCAI);
+            if (existingWebhooks[channel.id]) {
+                webhook = new WebhookClient({ id: existingWebhooks[channel.id].id, token: existingWebhooks[channel.id].token });
+            } else {
+                try {
+                    webhook = await channel.createWebhook({
+                        name: uname,
+                        avatar: pfp,
+                        reason: "",
+                    });
+                    saveWebhook(channel.id, { id: webhook.id, token: webhook.token }, charID);
+                    console.log("Created BOT Successfully");
+                } catch (error) {
+                    console.error("Failed to create webhook:", error);
+                    return message.reply("Failed to create webhook.");
+                }
             }
 
-            // Message event listener
             client.on('messageCreate', async (msg) => {
-                // Check if the message is from the bot or the webhook itself
                 if ((msg.webhookId && msg.webhookId === webhook.id) && !(msg.content.startsWith("!"))) {
                     return;
                 }
 
                 try {
-                    // Send message to the CAI character
                     await clientCAI.character.send_message(`${msg.author.username}: ${msg.content.trim()}`, true, "");
                     let response = await clientCAI.character.generate_turn();
                     if (response && response.turn && response.turn.candidates && response.turn.candidates.length > 0) {
                         const responseText = response.turn.candidates[0].raw_content;
                         console.log(`Response: `, responseText);
 
-                        // Send the response from the character back to the channel via the webhook
                         await webhook.send(filterMessage(responseText));
                         console.log("Response sent:", responseText);
                     } else {
@@ -96,3 +131,4 @@ module.exports = {
         }
     },
 };
+
