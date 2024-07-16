@@ -1,11 +1,14 @@
+// Sengoku Nadeko Bot
+
 const { Client, IntentsBitField } = require('discord.js');
 const CAINode = require('cainode');
+require('dotenv').config();
 
 const clientCAI = new CAINode();
 
 async function CAILogin(){
     try {
-        const loginStatus = await clientCAI.login("613982af86531a899af63e7a9042576c3097816b");
+        const loginStatus = await clientCAI.login(process.env.CAI_AUTH_TOKEN);
         if(loginStatus){
             console.log("CAI Logged In!");
         } else {
@@ -90,7 +93,7 @@ const clientDC = new Client({
     ],
 });
 
-clientDC.login("MTI2MjM3MDg3NTUzMDAyMjkyMg.GfiUIi.MwDaPJGB9W9VW8DrQvg5PjXNChCVieFjHqaOoA");
+clientDC.login(process.env.DISCORD_TOKEN);
 
 clientDC.on('ready', async (c) => {
     console.log(`${c.user.tag} is online!`);
