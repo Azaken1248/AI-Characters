@@ -20,8 +20,7 @@ module.exports = {
                 const remID = webhooks[webhookName].id;
                 await client.deleteWebhook(remID);
                 removeWebhook(webhookName);
-                
-                // Remove the event listener
+
                 const handleMessageCreate = client.webhookListeners.get(remID);
                 if (handleMessageCreate) {
                     client.removeListener('messageCreate', handleMessageCreate);
@@ -35,7 +34,6 @@ module.exports = {
                 if (deletedWebhookId) {
                     await client.deleteWebhook(webhookId);
                     
-                    // Remove the event listener
                     const handleMessageCreate = client.webhookListeners.get(webhookId);
                     if (handleMessageCreate) {
                         client.removeListener('messageCreate', handleMessageCreate);
