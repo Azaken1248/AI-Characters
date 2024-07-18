@@ -1,3 +1,4 @@
+const { EmbedBuilder } = require('discord.js');
 const CAINode = require('cainode');
 
 const { filterMessage } = require('../utils/stringUtils.js');
@@ -30,14 +31,16 @@ module.exports = {
             const pfp = avatarFileName 
                 ? `https://characterai.io/i/80/static/avatars/${avatarFileName}`
                 : '';
+            const caiLink = `https://character.ai/chat/${characterDetails.character.external_id}`
 
-            message.reply(`${pfp}\n${uname}`);
+            const embed = new EmbedBuilder().setColor('Yellow').setTitle(`${uname}`).setDescription(characterDetails.character.description).setThumbnail(pfp).addFields({ name: 'CAI Link', value: `[${uname}](${caiLink})`, inline: true }); 
 
             await node.character.connect(charID);
 
             const channel = message.channel;
-
+     
             let webhook;
+            let status = {text: "Failed To Create Webhook!",iconURL: "https://i.ibb.co/vznjJH0/cross.png"};
             try {
                 console.log(`Creating new webhook for channel ${channel.id}`);
                 webhook = await channel.createWebhook({
@@ -48,10 +51,13 @@ module.exports = {
                 console.log(`Webhook created: ${webhook.id}`);
                 saveWebhook(webhook.name, { id: webhook.id, token: webhook.token }, charID);
                 console.log("Saved webhook successfully");
+                status = {text: "Saved webhook successfully!",iconURL: "https://i.ibb.co/NVrHCky/tick.png"};
             } catch (error) {
                 console.error("Failed to create webhook:", error);
-                return message.reply("Failed to create webhook.");
             }
+
+            embed.setFooter(status);
+            message.reply({embeds: [embed]});
 
             const handleMessageCreate = async (msg) => {
                 if ((msg.webhookId && msg.webhookId === webhook.id) || msg.content.startsWith("!")) {
