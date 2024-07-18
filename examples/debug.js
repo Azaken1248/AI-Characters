@@ -30,7 +30,7 @@ async function debug(){
     if(login){
         const info = await client.character.info("5b0G10qbKz_echA7uD6WszQiPBuXiZywaiNuLefKEG4")  //-> this is sengoku nadeko :D
         console.log(info)
-        //const data = info["character"]["name"]
+        const data = info["character"]["name"]
         const searchResults = await client.character.search("Sengoku Nadeko")
         
         fs.writeFile('data.json',JSON.stringify(searchResults),(err) => {
@@ -40,7 +40,7 @@ async function debug(){
                 console.log("Written Successfully")
             }
         })
-        //const uname = acc["user"]["user"]["username"]
+        // const uname = acc["user"]["user"]["username"]
         const resArr = Array.from(searchResults["characters"])
 
         const minmax = getMinAndMaxScores(resArr)
