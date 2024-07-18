@@ -7,7 +7,7 @@ const { saveWebhook } = require('../utils/webhookUtils.js');
 module.exports = {
     name: "addCharacter",
     description: "Add AI Character To Server",
-    async execute(clientCAI,client, message, args) {
+    async execute(clientCAI, client, message, args) {
         console.log('Received args:', args);
         console.log('Received message:', message);
 
@@ -20,6 +20,7 @@ module.exports = {
         }
 
         const charID = args[0];
+        const flag = args[1];
         const node = new CAINode();
 
         try {
@@ -38,7 +39,7 @@ module.exports = {
             await node.character.connect(charID);
 
             const channel = message.channel;
-     
+
             let webhook;
             let status = {text: "Failed To Create Webhook!",iconURL: "https://i.ibb.co/vznjJH0/cross.png"};
             try {
@@ -60,7 +61,15 @@ module.exports = {
             message.reply({embeds: [embed]});
 
             const handleMessageCreate = async (msg) => {
-                if ((msg.webhookId && msg.webhookId === webhook.id) || msg.content.startsWith("!")) {
+                let check = false;
+
+                if (flag === '-c') {
+                    check = msg.author.bot;
+                } else if (flag === '-f') {
+                    check = msg.webhookId && msg.webhookId === webhook.id;
+                }
+
+                if (check || msg.content.startsWith("!")) {
                     return;
                 }
 
