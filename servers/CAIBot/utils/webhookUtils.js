@@ -1,29 +1,27 @@
 const fs = require('fs');
 
-function saveWebhook(webhookName, webhookData, characterID) {
+function saveWebhook(webhookName, webhookData, characterID, flag) {
     const PATH = './storage/webhooks.json';
-    
     let webhooks = {};
+    
     if (fs.existsSync(PATH)) {
         webhooks = JSON.parse(fs.readFileSync(PATH, 'utf8') || '{}');
     }
-    webhooks[webhookName] = { ...webhooks[webhookName], ...webhookData, characterID };
+    
+    webhooks[webhookName] = { ...webhooks[webhookName], ...webhookData, characterID, flag };
     console.log(webhooks);
     fs.writeFileSync(PATH, JSON.stringify(webhooks, null, 2));
 }
 
-
-
 async function loadWebhooks(clientCAI) {
     const PATH = './storage/webhooks.json';
-
     if (!fs.existsSync(PATH)) {
         return {};
     }
     const webhooks = JSON.parse(fs.readFileSync(PATH, 'utf8') || '{}');
     
-    for (const channelId in webhooks) {
-        const { characterID } = webhooks[channelId];
+    for (const webhookName in webhooks) {
+        const { characterID } = webhooks[webhookName];
         if (characterID) {
             try {
                 await clientCAI.character.connect(characterID);
