@@ -115,10 +115,8 @@ async function processQueue(node, webhook) {
 
     processing = true;
 
-    // Sort the queue by token
     messageQueue.sort((a, b) => a.token - b.token);
 
-    // Get the message with the lowest token
     const { msg, token } = messageQueue[0];
 
     try {
@@ -137,16 +135,12 @@ async function processQueue(node, webhook) {
         console.log("Message Error: ", error);
     }
 
-    // Remove the processed message from the queue
     messageQueue.shift();
 
     console.log(messageQueue);
-
-    // Process the next message in the queue after a delay
     setTimeout(() => processQueue(node, webhook), RATE_LIMIT_MS);
 }
 
-// Load webhooks and flags on bot startup
 module.exports.initListeners = async (clientCAI, client) => {
     const webhooks = await loadWebhooks(clientCAI);
     const node = new CAINode();
