@@ -1,76 +1,118 @@
-const fs = require('fs');
+const mongoose = require('mongoose');
+const CharacterModel = require('../storage/schema'); // Adjust the path as needed
+const connectDB = require('../storage/connection');
 
-function saveWebhook(webhookName, webhookData, characterID, flag) {
-    const PATH = './storage/webhooks.json';
-    let webhooks = {};
-    
-    if (fs.existsSync(PATH)) {
-        webhooks = JSON.parse(fs.readFileSync(PATH, 'utf8') || '{}');
+connectDB();
+
+async function saveWebhook(webhookName, webhookData, characterID, flag, serverID, channelID, listenerID) {
+    try {
+        let webhook = await CharacterModel.findOne({ username: webhookName });
+
+        if (webhook) {
+            // Update existing webhook
+            webhook = Object.assign(webhook, webhookData, { characterID, flag, serverID, channelID, listenerID });
+        } else {
+            // Create a new webhook
+            webhook = new CharacterModel({
+                username: webhookName,
+                ...webhookData,
+                characterID,
+                flag,
+                serverID,
+                channelID,
+                listenerID
+            });
+        }
+
+        await webhook.save();
+        console.log('Webhook saved:', webhook);
+    } catch (error) {
+        console.error('Error saving webhook:', error);
     }
-    
-    webhooks[webhookName] = { ...webhooks[webhookName], ...webhookData, characterID, flag };
-    console.log(webhooks);
-    fs.writeFileSync(PATH, JSON.stringify(webhooks, null, 2));
 }
 
-async function loadWebhooks(clientCAI) {
-    const PATH = './storage/webhooks.json';
-    if (!fs.existsSync(PATH)) {
-        return {};
-    }
-    const webhooks = JSON.parse(fs.readFileSync(PATH, 'utf8') || '{}');
-    
-    for (const webhookName in webhooks) {
-        const { characterID } = webhooks[webhookName];
-        if (characterID) {
-            try {
-                await clientCAI.character.connect(characterID);
-            } catch (error) {
-                console.error(`Failed to connect to character ${characterID}:`, error);
+async function loadWebhooks(client, clientCAI) {
+    try {
+        const webhooks = await CharacterModel.find({});
+
+        for (const webhook of webhooks) {
+            console.log(typeof(webhook["characterID"]));
+            const { characterID, serverID, channelID, listenerID, flag, id, token } = webhook;
+
+            if (characterID) {
+                try {
+                    await clientCAI.character.connect(webhook["characterID"]);
+                } catch (error) {
+                    console.error(`Failed to connect to character ${characterID}:`, error);
+                }
             }
-        }
-    }
 
-    return webhooks;
+            const handleMessageCreate = async (msg) => {
+                let check = false;
+
+                if (flag === '-c') {
+                    check = msg.author.bot;
+                } else if (flag === '-f') {
+                    check = msg.webhookId && msg.webhookId === id;
+                }
+
+                if (check || msg.content.startsWith("!")) {
+                    return;
+                }
+
+                const token = ++currentToken;
+                messageQueue.push({ msg, token });
+
+                if (!processing) {
+                    processQueue(clientCAI, webhook);
+                }
+            };
+
+            if (!client.webhookListeners) {
+                client.webhookListeners = new Map();
+            }
+
+            if (client.webhookListeners.has(listenerID)) {
+                const oldListener = client.webhookListeners.get(listenerID);
+                client.removeListener('messageCreate', oldListener);
+            }
+
+            client.webhookListeners.set(listenerID, handleMessageCreate);
+            client.on('messageCreate', handleMessageCreate);
+        }
+
+        return webhooks;
+    } catch (error) {
+        console.error('Error loading webhooks:', error);
+        return [];
+    }
 }
 
-async function removeWebhook(identifier) {
-    const PATH = './storage/webhooks.json';
+async function removeWebhook(client, identifier) {
+    try {
+        const webhook = await CharacterModel.findOneAndDelete({
+            $or: [{ id: identifier }, { username: identifier }]
+        });
 
-    if (!fs.existsSync(PATH)) {
-        console.error("Webhooks file does not exist.");
-        return null;
-    }
+        if (webhook) {
+            const { listenerID } = webhook;
+            if (listenerID && client.webhookListeners.has(listenerID)) {
+                const oldListener = client.webhookListeners.get(listenerID);
+                client.removeListener('messageCreate', oldListener);
+                client.webhookListeners.delete(listenerID);
+            }
 
-    let webhooks = JSON.parse(fs.readFileSync(PATH, 'utf8') || '{}');
-
-    let webhookIdToRemove = null;
-    let webhookNameToRemove = null;
-
-    for (const [name, data] of Object.entries(webhooks)) {
-        if (data.id === identifier) {
-            webhookIdToRemove = data.id;
-            webhookNameToRemove = name;
-            break;
+            console.log(`Webhook with ${webhook.id ? 'ID' : 'name'} '${identifier}' removed.`);
+            return webhook.id;
+        } else {
+            console.error(`Webhook with identifier '${identifier}' does not exist.`);
+            return null;
         }
-        if (name === identifier) {
-            webhookNameToRemove = name;
-            webhookIdToRemove = data.id;
-            break;
-        }
-    }
-
-    if (webhookNameToRemove) {
-        delete webhooks[webhookNameToRemove];
-        fs.writeFileSync(PATH, JSON.stringify(webhooks, null, 2));
-        console.log(`Webhook with ${webhookIdToRemove ? 'ID' : 'name'} '${identifier}' removed.`);
-        return webhookIdToRemove;
-    } else {
-        console.error(`Webhook with identifier '${identifier}' does not exist.`);
+    } catch (error) {
+        console.error('Error removing webhook:', error);
         return null;
     }
 }
-
 
 module.exports = {
     saveWebhook,
