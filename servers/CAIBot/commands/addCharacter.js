@@ -1,7 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 const CAINode = require('cainode');
 const { filterMessage } = require('../utils/stringUtils.js');
-const { saveWebhook, loadWebhooks } = require('../utils/webhookUtils.js');
+const { saveWebhook } = require('../utils/webhookUtils.js');
 
 const messageQueue = [];
 let currentToken = 0;
@@ -43,6 +43,9 @@ module.exports = {
             await node.character.connect(charID);
 
             const channel = message.channel;
+            const serverID = message.guild.id;
+            const channelID = message.channel.id;
+            const listenerID = `${serverID}-${channelID}-${charID}`;
 
             let webhook;
             let status = {text: "Failed To Create Webhook!", iconURL: "https://i.ibb.co/vznjJH0/cross.png"};
@@ -54,7 +57,7 @@ module.exports = {
                     reason: "",
                 });
                 console.log(`Webhook created: ${webhook.id}`);
-                saveWebhook(webhook.name, { id: webhook.id, token: webhook.token }, charID, flag);
+                await saveWebhook(webhook.name, { id: webhook.id, token: webhook.token }, charID, flag, serverID, channelID, listenerID);
                 console.log("Saved webhook successfully");
                 status = {text: "Saved webhook successfully!", iconURL: "https://i.ibb.co/NVrHCky/tick.png"};
             } catch (error) {
@@ -91,12 +94,12 @@ module.exports = {
                 client.webhookListeners = new Map();
             }
 
-            if (client.webhookListeners.has(webhook.id)) {
-                const oldListener = client.webhookListeners.get(webhook.id);
+            if (client.webhookListeners.has(listenerID)) {
+                const oldListener = client.webhookListeners.get(listenerID);
                 client.removeListener('messageCreate', oldListener);
             }
 
-            client.webhookListeners.set(webhook.id, handleMessageCreate);
+            client.webhookListeners.set(listenerID, handleMessageCreate);
 
             client.on('messageCreate', handleMessageCreate);
 
@@ -140,46 +143,3 @@ async function processQueue(node, webhook) {
     console.log(messageQueue);
     setTimeout(() => processQueue(node, webhook), RATE_LIMIT_MS);
 }
-
-module.exports.initListeners = async (clientCAI, client) => {
-    const webhooks = await loadWebhooks(clientCAI);
-    const node = new CAINode();
-
-    await node.login(process.env.CAI_AUTH_TOKEN);
-
-    for (const [webhookName, { id, token, characterID, flag }] of Object.entries(webhooks)) {
-        const webhook = await client.fetchWebhook(id, token);
-        const handleMessageCreate = async (msg) => {
-            let check = false;
-
-            if (flag === '-c') {
-                check = msg.author.bot;
-            } else if (flag === '-f') {
-                check = msg.webhookId && msg.webhookId === webhook.id;
-            }
-
-            if (check || msg.content.startsWith("!")) {
-                return;
-            }
-
-            const token = ++currentToken;
-            messageQueue.push({ msg, token });
-
-            if (!processing) {
-                processQueue(node, webhook);
-            }
-        };
-
-        if (!client.webhookListeners) {
-            client.webhookListeners = new Map();
-        }
-
-        if (client.webhookListeners.has(webhook.id)) {
-            const oldListener = client.webhookListeners.get(webhook.id);
-            client.removeListener('messageCreate', oldListener);
-        }
-
-        client.webhookListeners.set(webhook.id, handleMessageCreate);
-        client.on('messageCreate', handleMessageCreate);
-    }
-};
