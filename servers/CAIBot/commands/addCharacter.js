@@ -1,12 +1,8 @@
+
 const { EmbedBuilder } = require('discord.js');
 const CAINode = require('cainode');
-const { filterMessage } = require('../utils/stringUtils.js');
 const { saveWebhook } = require('../utils/webhookUtils.js');
-
-const messageQueue = [];
-let currentToken = 0;
-let processing = false;
-const RATE_LIMIT_MS = 2000;
+const { handleMessageCreate } = require('../utils/concurrencyUtils.js');
 
 module.exports = {
     name: "addCharacter",
@@ -44,7 +40,7 @@ module.exports = {
 
             const channel = message.channel;
             const serverID = message.guild.id;
-            const channelID = message.channel.id;
+            const channelID = message.channelId;
             const listenerID = `${serverID}-${channelID}-${charID}`;
 
             let webhook;
@@ -67,29 +63,6 @@ module.exports = {
             embed.setFooter(status);
             message.reply({ embeds: [embed] });
 
-            const handleMessageCreate = async (msg) => {
-                let check = false;
-
-                if (flag === '-c') {
-                    check = msg.author.bot;
-                } else if (flag === '-f') {
-                    check = msg.webhookId && msg.webhookId === webhook.id;
-                }
-
-                if (check || msg.content.startsWith("!")) {
-                    return;
-                }
-
-                // Add the message to the queue
-                const token = ++currentToken;
-                messageQueue.push({ msg, token });
-
-                // Process the queue if not already processing
-                if (!processing) {
-                    processQueue(node, webhook);
-                }
-            };
-
             if (!client.webhookListeners) {
                 client.webhookListeners = new Map();
             }
@@ -99,9 +72,10 @@ module.exports = {
                 client.removeListener('messageCreate', oldListener);
             }
 
-            client.webhookListeners.set(listenerID, handleMessageCreate);
+            const boundHandleMessageCreate = (msg) => handleMessageCreate(msg, flag, node, webhook);
+            client.webhookListeners.set(listenerID, boundHandleMessageCreate);
 
-            client.on('messageCreate', handleMessageCreate);
+            client.on('messageCreate', boundHandleMessageCreate);
 
         } catch (error) {
             console.error("Error in addCharacter command:", error);
@@ -109,37 +83,3 @@ module.exports = {
         }
     },
 };
-
-async function processQueue(node, webhook) {
-    if (messageQueue.length === 0) {
-        processing = false;
-        return;
-    }
-
-    processing = true;
-
-    messageQueue.sort((a, b) => a.token - b.token);
-
-    const { msg, token } = messageQueue[0];
-
-    try {
-        await node.character.send_message(`${msg.author.username}: ${msg.content.trim()}`, true, "");
-        let response = await node.character.generate_turn();
-        if (response && response.turn && response.turn.candidates && response.turn.candidates.length > 0) {
-            const responseText = response.turn.candidates[0].raw_content;
-            console.log(`Response: `, responseText);
-
-            await webhook.send(filterMessage(responseText));
-            console.log("Response sent:", responseText);
-        } else {
-            console.log("No response from character");
-        }
-    } catch (error) {
-        console.log("Message Error: ", error);
-    }
-
-    messageQueue.shift();
-
-    console.log(messageQueue);
-    setTimeout(() => processQueue(node, webhook), RATE_LIMIT_MS);
-}
