@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
-const CharacterModel = require('../storage/schema'); // Adjust the path as needed
+const CharacterModel = require('../storage/schema'); 
 const connectDB = require('../storage/connection');
+const { handleMessageCreate } = require('../utils/concurrencyUtils');
 
 connectDB();
 
@@ -9,10 +9,8 @@ async function saveWebhook(webhookName, webhookData, characterID, flag, serverID
         let webhook = await CharacterModel.findOne({ username: webhookName });
 
         if (webhook) {
-            // Update existing webhook
             webhook = Object.assign(webhook, webhookData, { characterID, flag, serverID, channelID, listenerID });
         } else {
-            // Create a new webhook
             webhook = new CharacterModel({
                 username: webhookName,
                 ...webhookData,
@@ -36,37 +34,22 @@ async function loadWebhooks(client, clientCAI) {
         const webhooks = await CharacterModel.find({});
 
         for (const webhook of webhooks) {
-            console.log(typeof(webhook["characterID"]));
-            const { characterID, serverID, channelID, listenerID, flag, id, token } = webhook;
+            const { username, id, token, characterID, flag, serverID, channelID, listenerID } = webhook;
 
             if (characterID) {
                 try {
-                    await clientCAI.character.connect(webhook["characterID"]);
+                    await clientCAI.login(process.env.CAI_AUTH_TOKEN);
+                    if (clientCAI?.character?.connect) {
+                        await clientCAI.character.connect(characterID);
+                    } else {
+                        console.error('clientCAI.character.connect is not defined');
+                    }
                 } catch (error) {
                     console.error(`Failed to connect to character ${characterID}:`, error);
                 }
             }
 
-            const handleMessageCreate = async (msg) => {
-                let check = false;
-
-                if (flag === '-c') {
-                    check = msg.author.bot;
-                } else if (flag === '-f') {
-                    check = msg.webhookId && msg.webhookId === id;
-                }
-
-                if (check || msg.content.startsWith("!")) {
-                    return;
-                }
-
-                const token = ++currentToken;
-                messageQueue.push({ msg, token });
-
-                if (!processing) {
-                    processQueue(clientCAI, webhook);
-                }
-            };
+            const boundHandleMessageCreate = (msg) => handleMessageCreate(msg, flag, clientCAI, webhook);
 
             if (!client.webhookListeners) {
                 client.webhookListeners = new Map();
@@ -77,8 +60,8 @@ async function loadWebhooks(client, clientCAI) {
                 client.removeListener('messageCreate', oldListener);
             }
 
-            client.webhookListeners.set(listenerID, handleMessageCreate);
-            client.on('messageCreate', handleMessageCreate);
+            client.webhookListeners.set(listenerID, boundHandleMessageCreate);
+            client.on('messageCreate', boundHandleMessageCreate);
         }
 
         return webhooks;
