@@ -1,50 +1,70 @@
 const { WebhookClient } = require('discord.js');
-const messageQueue = [];
-let currentToken = 0;
-let processing = false;
-const RATE_LIMIT_MS = 2000;
 const { filterMessage } = require('./stringUtils.js');
 
-async function handleMessageCreate(msg, flag, node, webhook) {
+const messageQueues = new Map();  
+const processingFlags = new Map();  
+const RATE_LIMIT_MS = 2000;
+
+async function handleMessageCreate(msg, flag, webhook) {
     let check = false;
 
+    // Character-specific logic for ignoring messages based on flag
     if (flag === '-c') {
-        check = msg.author.bot;
+        check = msg.author.bot;  
     } else if (flag === '-f') {
-        check = msg.webhookId && msg.webhookId === webhook.id;
+        check = msg.webhookId && msg.webhookId === webhook.id; 
     }
 
+    // Ignore if check is true or message starts with "!"
     if (check || msg.content.startsWith("!")) {
         return;
     }
 
-    const token = ++currentToken;
-    messageQueue.push({ msg, token });
+    // Ensure there is a queue for this characterID
+    if (!messageQueues.has(webhook.characterID)) {
+        messageQueues.set(webhook.characterID, []);
+        processingFlags.set(webhook.characterID, false);  
+    }
 
-    if (!processing) {
-        processQueue(node, webhook);
+    // Add message to the queue for this characterID
+    const queue = messageQueues.get(webhook.characterID);
+    const token = queue.length + 1;  
+    queue.push({ msg, token });
+
+    // Process the queue if not already processing
+    if (!processingFlags.get(webhook.characterID)) {
+        processQueue(webhook);
     }
 }
 
-async function processQueue(node, webhook) {
-    if (messageQueue.length === 0) {
-        processing = false;
+async function processQueue(webhook) {
+    const queue = messageQueues.get(webhook.characterID);
+
+    // Check if the queue for this character is empty
+    if (!queue || queue.length === 0) {
+        processingFlags.set(webhook.characterID, false);
         return;
     }
 
-    processing = true;
+    processingFlags.set(webhook.characterID, true);
 
-    messageQueue.sort((a, b) => a.token - b.token);
+    // Sort the queue by token to ensure correct message order
+    queue.sort((a, b) => a.token - b.token);
 
-    const { msg, token } = messageQueue[0];
+    // Process the first message in the queue
+    const { msg, token } = queue[0];
 
     try {
-        await node.character.send_message(`${msg.author.username}: ${msg.content.trim()}`, true, "");
-        let response = await node.character.generate_turn();
+        // Send message to the character via webhook.clientCAI
+        await webhook.clientCAI.character.send_message(`${msg.author.username}: ${msg.content.trim()}`, true, "");
+
+        // Generate response from the character
+        let response = await webhook.clientCAI.character.generate_turn();
         if (response && response.turn && response.turn.candidates && response.turn.candidates.length > 0) {
             const responseText = response.turn.candidates[0].raw_content;
             console.log(`Response: `, responseText);
 
+            // Send response via webhook
             const webhookClient = new WebhookClient({ id: webhook.id, token: webhook.token });
             await webhookClient.send(filterMessage(responseText));
             console.log("Response sent:", responseText);
@@ -55,10 +75,11 @@ async function processQueue(node, webhook) {
         console.log("Message Error: ", error);
     }
 
-    messageQueue.shift();
+    // Remove the processed message from the queue
+    queue.shift();
 
-    console.log(messageQueue);
-    setTimeout(() => processQueue(node, webhook), RATE_LIMIT_MS);
+    // Continue processing the queue with a rate limit delay
+    setTimeout(() => processQueue(webhook), RATE_LIMIT_MS);
 }
 
 module.exports = { handleMessageCreate, processQueue };

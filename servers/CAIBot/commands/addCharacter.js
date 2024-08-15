@@ -27,6 +27,8 @@ module.exports = {
             await node.login(process.env.CAI_AUTH_TOKEN);
             const characterDetails = await node.character.info(charID);
 
+            console.log('Character details:', characterDetails); 
+
             const uname = characterDetails.character?.name || 'Unknown Name';
             const avatarFileName = characterDetails.character?.avatar_file_name;
             const pfp = avatarFileName 
@@ -36,6 +38,7 @@ module.exports = {
 
             const embed = new EmbedBuilder().setColor('Yellow').setTitle(`${uname}`).setDescription(characterDetails.character.description).setThumbnail(pfp).addFields({ name: 'CAI Link', value: `[${uname}](${caiLink})`, inline: true }); 
 
+            console.log(`Connecting to character ${charID}`);
             await node.character.connect(charID);
 
             const channel = message.channel;
