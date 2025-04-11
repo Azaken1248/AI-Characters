@@ -1,7 +1,7 @@
-const { Client, GatewayIntentBits, Collection, WebhookClient } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, Events } = require('discord.js');
 const fs = require('fs');
+const path = require('path');
 const CAINode = require('cainode');
-const { filterMessage } = require('./utils/stringUtils.js');
 const { loadWebhooks } = require('./utils/webhookUtils.js');
 
 require('dotenv').config();
@@ -13,53 +13,55 @@ const client = new Client({
         GatewayIntentBits.MessageContent
     ]
 });
-const clientCAI = new CAINode();
 
+client.webhookListeners = new Map();
+
+const clientCAI = new CAINode();
 client.commands = new Collection();
-const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+
+
+const commandsPath = path.join(__dirname, 'commands');
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
 for (const file of commandFiles) {
-    const command = require(`./commands/${file}`);
-    client.commands.set(command.name, command);
-    console.log(`Command loaded: ${command.name}`);
+    const command = require(path.join(commandsPath, file));
+    if ('data' in command && 'execute' in command) {
+        client.commands.set(command.data.name, command);
+        console.log(`Slash command loaded: ${command.data.name}`);
+    } else {
+        console.warn(`[WARNING] The command at ${file} is missing "data" or "execute".`);
+    }
 }
 
-console.log(client.commands);
-
-client.once('ready', async () => {
-    console.log('Bot is online!');
+client.once(Events.ClientReady, async () => {
+    console.log(`Logged in as ${client.user.tag}!`);
 
     try {
         const existingWebhooks = await loadWebhooks(client, clientCAI);
-        console.log("Loaded Webhooks: ",existingWebhooks);
+        console.log("Loaded Webhooks:", existingWebhooks);
     } catch (error) {
-        console.error('Error Loading Webhooks:', error);
+        console.error('Error loading webhooks:', error);
     }
 });
 
-client.on('messageCreate', async (message) => {
-    if (!message.content.startsWith('!') || message.author.bot) return;
+client.on(Events.InteractionCreate, async interaction => {
+    if (!interaction.isChatInputCommand()) return;
 
-    message.channel.sendTyping();
-
-    const args = message.content.slice(1).trim().split(/ +/);
-    const commandName = args.shift();
-
-    console.log(`Received command: ${commandName}`);
-
-    if (!client.commands.has(commandName)) {
-        console.log(`Command not found: ${commandName}`);
+    const command = client.commands.get(interaction.commandName);
+    if (!command) {
+        console.error(`No command matching ${interaction.commandName} was found.`);
         return;
     }
 
-    const command = client.commands.get(commandName);
-
     try {
-        await command.execute(clientCAI, client, message, args);
-        console.log(`Executed command: ${commandName}`);
+        await command.execute(interaction, clientCAI, client);
     } catch (error) {
-        console.error(`Error executing command ${commandName}:`, error);
-        message.reply('There was an error trying to execute that command!');
+        console.error(`Error executing command ${interaction.commandName}:`, error);
+        if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
+        } else {
+            await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+        }
     }
 });
 
