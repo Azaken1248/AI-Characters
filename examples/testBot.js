@@ -8,7 +8,7 @@ const clientCAI = new CAINode();
 
 async function CAILogin(){
     try {
-        const loginStatus = await clientCAI.login(process.env.CAI_AUTH_TOKEN);
+        const loginStatus = await clientCAI.login("<YOUR_TOKEN>");
         if(loginStatus){
             console.log("CAI Logged In!");
         } else {
