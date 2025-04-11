@@ -139,7 +139,7 @@ async function getCharacterDetails(characterID) {
   const node = new CAINode();
 
   try {
-    await node.login("613982af86531a899af63e7a9042576c3097816b");
+    await node.login("<YOUR_LOGIN>");
     const characterDetails = await node.character.info(characterID);
     const character = node.character.connect(characterID)
 
