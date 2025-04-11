@@ -1,38 +1,47 @@
 const { WebhookClient } = require('discord.js');
 const { filterMessage } = require('./stringUtils.js');
 
-const messageQueues = new Map();  
-const processingFlags = new Map();  
+const messageQueues = new Map();
+const processingFlags = new Map();
 const RATE_LIMIT_MS = 2000;
 
-async function handleMessageCreate(msg, flag, webhook) {
+async function handleMessageCreate(msg, webhook) {
+    if (messageQueues.get(webhook.characterID)?.some(entry => entry.msg.id === msg.id)) {
+        console.log(`⚠️ Duplicate message blocked: ${msg.id}`);
+        return;
+      }
+      
+    console.log(`[${webhook.characterID}] 📥 Received Discord message: ${msg.content}`);
+
     let check = false;
 
-    // Character-specific logic for ignoring messages based on flag
-    if (flag === '-c') {
-        check = msg.author.bot;  
-    } else if (flag === '-f') {
-        check = msg.webhookId && msg.webhookId === webhook.id; 
+    if(msg.webhookId == webhook.id){
+        return
     }
 
-    // Ignore if check is true or message starts with "!"
+    if (webhook.options.ignoreBots) {
+        check = msg.author.bot;
+    } else if (webhook.options.onlySelfWebhook) {
+        check = msg.webhookId && msg.webhookId === webhook.id;
+    }
+
     if (check || msg.content.startsWith("!")) {
         return;
     }
 
-    // Ensure there is a queue for this characterID
     if (!messageQueues.has(webhook.characterID)) {
         messageQueues.set(webhook.characterID, []);
-        processingFlags.set(webhook.characterID, false);  
+        processingFlags.set(webhook.characterID, false);
     }
 
-    // Add message to the queue for this characterID
     const queue = messageQueues.get(webhook.characterID);
-    const token = queue.length + 1;  
+    const token = queue.length + 1;
     queue.push({ msg, token });
 
-    // Process the queue if not already processing
+    console.log(`[${webhook.characterID}] 📨 Queued msg #${token}: ${msg.content}`);
+
     if (!processingFlags.get(webhook.characterID)) {
+        processingFlags.set(webhook.characterID, true);
         processQueue(webhook);
     }
 }
@@ -40,46 +49,44 @@ async function handleMessageCreate(msg, flag, webhook) {
 async function processQueue(webhook) {
     const queue = messageQueues.get(webhook.characterID);
 
-    // Check if the queue for this character is empty
     if (!queue || queue.length === 0) {
         processingFlags.set(webhook.characterID, false);
         return;
     }
 
-    processingFlags.set(webhook.characterID, true);
-
-    // Sort the queue by token to ensure correct message order
-    queue.sort((a, b) => a.token - b.token);
-
-    // Process the first message in the queue
     const { msg, token } = queue[0];
+    console.log(`[${webhook.characterID}] 🕐 Processing msg #${token}: ${msg.content}`);
 
     try {
-        // Send message to the character via webhook.clientCAI
+        if (!webhook.clientCAI?.character?.send_message || !webhook.clientCAI?.character?.generate_turn) {
+            console.error(`❌ [${webhook.characterID}] Missing CAI character methods`);
+            throw new Error("Invalid CAI character instance");
+        }
+
+        console.log(`[${webhook.characterID}] ✉️ Sending to CAI: ${msg.author.username}: ${msg.content.trim()}`);
         await webhook.clientCAI.character.send_message(`${msg.author.username}: ${msg.content.trim()}`, true, "");
 
-        // Generate response from the character
-        let response = await webhook.clientCAI.character.generate_turn();
-        if (response && response.turn && response.turn.candidates && response.turn.candidates.length > 0) {
-            const responseText = response.turn.candidates[0].raw_content;
-            console.log(`Response: `, responseText);
+        console.log(`[${webhook.characterID}] 🔄 Generating reply...`);
+        const response = await webhook.clientCAI.character.generate_turn();
 
-            // Send response via webhook
+        if (response?.turn?.candidates?.length > 0) {
+            const responseText = response.turn.candidates[0].raw_content;
+            console.log(`[${webhook.characterID}] 🧠 Got reply: ${responseText}`);
+
             const webhookClient = new WebhookClient({ id: webhook.id, token: webhook.token });
+            if (!webhookClient) return;
+
             await webhookClient.send(filterMessage(responseText));
-            console.log("Response sent:", responseText);
+            console.log(`[${webhook.characterID}] ✅ Response sent`);
         } else {
-            console.log("No response from character");
+            console.warn(`[${webhook.characterID}] ⚠️ No response candidates from character`);
         }
     } catch (error) {
-        console.log("Message Error: ", error);
+        console.error(`[${webhook.characterID}] 🔥 Error while processing message #${token}:`, error);
+    } finally {
+        queue.shift();
+        setTimeout(() => processQueue(webhook), RATE_LIMIT_MS);
     }
-
-    // Remove the processed message from the queue
-    queue.shift();
-
-    // Continue processing the queue with a rate limit delay
-    setTimeout(() => processQueue(webhook), RATE_LIMIT_MS);
 }
 
 module.exports = { handleMessageCreate, processQueue };
