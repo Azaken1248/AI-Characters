@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
+require('dotenv').config();
 
-const uri = 'mongodb+srv://azaken:lolface123@acai-db.i9zwvy1.mongodb.net/?retryWrites=true&w=majority&appName=ACAI-DB';
+const uri = process.env.MONGO_URI;
 
 const connectDB = async () => {
   try {

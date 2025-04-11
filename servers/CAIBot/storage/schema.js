@@ -19,9 +19,10 @@ const characterSchema = new Schema({
     type: String,
     required: true
   },
-  flag: {
-    type: String,
-    required: true
+  options: {
+    type: Object,
+    required: false,
+    default: {}
   },
   serverID: {
     type: String,
