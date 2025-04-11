@@ -1,55 +1,77 @@
+const { SlashCommandBuilder } = require('@discordjs/builders');
 const { removeWebhook, loadWebhooks } = require('../utils/webhookUtils.js');
 
 module.exports = {
-    name: "removeCharacter",
-    description: "Remove A CAI Character",
-    async execute(clientCAI, client, message, args) {
-        if (args.length === 0) {
-            message.reply("Enter a Webhook Name or ID!");
-            return;
-        }
-
-        try {
-            if (args[0] === "-n") {
-                const webhooks = await loadWebhooks(clientCAI);
-                const webhookName = args[1];
-                if (!webhooks[webhookName]) {
-                    message.reply(`Webhook with name '${webhookName}' not found.`);
-                    return;
-                }
-                const remID = webhooks[webhookName].id;
-                await client.deleteWebhook(remID);
-                removeWebhook(webhookName);
-
-                const handleMessageCreate = client.webhookListeners.get(remID);
-                if (handleMessageCreate) {
-                    client.removeListener('messageCreate', handleMessageCreate);
-                    client.webhookListeners.delete(remID);
-                }
-
-                message.reply(`Webhook '${webhookName}' removed successfully.`);
-            } else if (args[0] === "-i") {
-                const webhookId = args[1];
-                const deletedWebhookId = await removeWebhook(webhookId);
-                if (deletedWebhookId) {
-                    await client.deleteWebhook(webhookId);
-                    
-                    const handleMessageCreate = client.webhookListeners.get(webhookId);
-                    if (handleMessageCreate) {
-                        client.removeListener('messageCreate', handleMessageCreate);
-                        client.webhookListeners.delete(webhookId);
-                    }
-
-                    message.reply(`Webhook with ID '${webhookId}' removed successfully.`);
-                } else {
-                    message.reply(`Webhook with ID '${webhookId}' not found.`);
-                }
-            } else {
-                message.reply("Invalid option. Use -n for name or -i for ID.");
+  data: new SlashCommandBuilder()
+    .setName('removecharacter')
+    .setDescription('Remove a CAI Character by webhook name or ID')
+    .addStringOption(opt =>
+      opt
+        .setName('name')
+        .setDescription('The name of the webhook to remove')
+        .setRequired(false))
+    .addStringOption(opt =>
+      opt
+        .setName('id')
+        .setDescription('The ID of the webhook to remove')
+        .setRequired(false)),
+        async execute(interaction) {
+            const webhookName = interaction.options.getString('name');
+            const webhookId   = interaction.options.getString('id');
+          
+            if ((!webhookName && !webhookId) || (webhookName && webhookId)) {
+              return interaction.reply({
+                content: 'Please provide **either** a webhook `name` **or** `id`, but not both.',
+                ephemeral: true
+              });
             }
-        } catch (error) {
-            console.error(error);
-            message.reply("Failed to delete webhook!");
-        }
-    },
+          
+            await interaction.deferReply();
+          
+            try {
+              if (webhookName) {
+                const webhooks = await loadWebhooks(interaction.client);
+
+                const webhookMap = {};
+                for (const wh of webhooks) {
+                    webhookMap[wh.username] = wh;   
+                }
+
+
+                if (!webhookMap[webhookName]) {
+                  return interaction.editReply(`❌ Webhook named \`${webhookName}\` not found.`);
+                }
+          
+                const remID = webhookMap[webhookName].id;
+                await interaction.client.deleteWebhook(remID);
+                await removeWebhook(interaction.client, webhookName);
+          
+                const handler = interaction.client.webhookListeners?.get(remID);
+                if (handler) {
+                  interaction.client.removeListener('messageCreate', handler);
+                  interaction.client.webhookListeners.delete(remID);
+                }
+          
+                return interaction.editReply(`✅ Webhook \`${webhookName}\` removed successfully.`);
+              }
+          
+              const deleted = await removeWebhook(interaction.client, webhookId);
+              if (!deleted) {
+                return interaction.editReply(`❌ Webhook with ID \`${webhookId}\` not found.`);
+              }
+          
+              await interaction.client.deleteWebhook(webhookId);
+              const handler = interaction.client.webhookListeners?.get(webhookId);
+              if (handler) {
+                interaction.client.removeListener('messageCreate', handler);
+                interaction.client.webhookListeners.delete(webhookId);
+              }
+          
+              return interaction.editReply(`✅ Webhook with ID \`${webhookId}\` removed successfully.`);
+            } catch (error) {
+              console.error('Error in /removecharacter:', error);
+              return interaction.editReply('⚠️ Failed to delete webhook.');
+            }
+          }
+          
 };

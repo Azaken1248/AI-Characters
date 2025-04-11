@@ -1,49 +1,52 @@
+const { SlashCommandBuilder } = require('@discordjs/builders');
 const fs = require('fs');
 const path = require('path');
 
 module.exports = {
-    name: "setCAIAuth",
-    description: "Set The Character AI Auth Token",
-    execute(clientCAI,client,message, args) {
-        if (args.length === 0) {
-            return message.reply('Please provide an auth token.');
+  data: new SlashCommandBuilder()
+    .setName('setcai-auth')
+    .setDescription('Set the Character AI auth token')
+    .addStringOption(option =>
+      option
+        .setName('token')
+        .setDescription('Your CAI auth token')
+        .setRequired(true)
+    ),
+
+  async execute(interaction) {
+    const authToken = interaction.options.getString('token');
+    await interaction.deferReply({ ephemeral: true });
+
+    const envPath = path.resolve(__dirname, '../.env');
+    try {
+      let data = '';
+      try {
+        data = await fs.promises.readFile(envPath, 'utf8');
+      } catch (readErr) {
+        if (readErr.code !== 'ENOENT') throw readErr;
+      }
+
+      const lines = data.split('\n');
+      let tokenSet = false;
+
+      const newLines = lines.map(line => {
+        if (line.startsWith('CAI_AUTH_TOKEN=')) {
+          tokenSet = true;
+          return `CAI_AUTH_TOKEN=${authToken}`;
         }
+        return line;
+      });
 
-        const authToken = args[0];
-        const envPath = path.resolve(__dirname, '../.env');
+      if (!tokenSet) {
+        newLines.push(`CAI_AUTH_TOKEN=${authToken}`);
+      }
 
-        console.log(`Received auth token: ${authToken}`);
-
-        fs.readFile(envPath, 'utf8', (err, data) => {
-            if (err) {
-                console.error(`Error reading the .env file: ${err}`);
-                return message.reply('Error reading the .env file.');
-            }
-
-            const lines = data.split('\n');
-            let authTokenSet = false;
-
-            const newLines = lines.map(line => {
-                if (line.startsWith('CAI_AUTH_TOKEN=')) {
-                    authTokenSet = true;
-                    return `CAI_AUTH_TOKEN=${authToken}`;
-                }
-                return line;
-            });
-
-            if (!authTokenSet) {
-                newLines.push(`CAI_AUTH_TOKEN=${authToken}`);
-            }
-
-            fs.writeFile(envPath, newLines.join('\n'), 'utf8', err => {
-                if (err) {
-                    console.error(`Error writing to the .env file: ${err}`);
-                    return message.reply('Error writing to the .env file.');
-                }
-
-                console.log('Auth token set successfully.');
-                message.reply('Auth token set successfully.');
-            });
-        });
-    },
+      await fs.promises.writeFile(envPath, newLines.join('\n'), 'utf8');
+      console.log('Auth token set successfully.');
+      await interaction.editReply({ content: '✅ Auth token set successfully.', ephemeral: true });
+    } catch (error) {
+      console.error('Error setting auth token:', error);
+      await interaction.editReply({ content: '❌ Error writing to the .env file.', ephemeral: true });
+    }
+  },
 };

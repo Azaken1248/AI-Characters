@@ -1,9 +1,13 @@
+const { SlashCommandBuilder } = require('@discordjs/builders');
 
 module.exports = {
-    name: "getChannelID",
-    description: "Add AI Character To Server",
-    execute(clientCAI,client,message,args){
-        console.log(message.channelId);
-        message.reply(message.channelId);
-    }
-}
+  data: new SlashCommandBuilder()
+    .setName('getchannelid')
+    .setDescription('Get the current channel ID'),
+
+  async execute(interaction) {
+    const channelId = interaction.channelId;
+    console.log(channelId);
+    await interaction.reply(`Channel ID: \`${channelId}\``);
+  },
+};
