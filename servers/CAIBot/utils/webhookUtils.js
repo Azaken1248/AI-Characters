@@ -5,42 +5,14 @@ const CAINode = require('cainode')
 
 connectDB();
 
-async function saveWebhook(webhookName, webhookData, characterID, flag, serverID, channelID, listenerID) {
-    try {
-        let webhook = await CharacterModel.findOne({ username: webhookName });
-
-        if (webhook) {
-            webhook = Object.assign(webhook, webhookData, { characterID, flag, serverID, channelID, listenerID });
-        } else {
-            webhook = new CharacterModel({
-                username: webhookName,
-                ...webhookData,
-                characterID,
-                flag,
-                serverID,
-                channelID,
-                listenerID
-            });
-        }
-
-        await webhook.save();
-        console.log('Webhook saved:', webhook);
-    } catch (error) {
-        console.error('Error saving webhook:', error);
-    }
-}
-
-async function loadWebhooks(client, createClientCAI) {
+async function loadWebhooks(client, _createClientCAI = null) {
     try {
         const webhooks = await CharacterModel.find({});
 
         for (const webhook of webhooks) {
-            const { characterID } = webhook;
+            const { characterID, id: webhookID } = webhook;
 
-            // Create a unique clientCAI for each character
-            const clientCAI = new CAINode();  // Replace with the actual clientCAI creation logic
-
-            // Store clientCAI in the webhook object
+            const clientCAI = new CAINode(); 
             webhook.clientCAI = clientCAI;
 
             try {
@@ -54,18 +26,18 @@ async function loadWebhooks(client, createClientCAI) {
                 console.error(`Failed to connect to character ${characterID}:`, error);
             }
 
-            const boundHandleMessageCreate = (msg) => handleMessageCreate(msg, '-f', webhook);
+            const boundHandleMessageCreate = (msg) => handleMessageCreate(msg, webhook);
 
             if (!client.webhookListeners) {
                 client.webhookListeners = new Map();
             }
 
-            if (client.webhookListeners.has(characterID)) {
-                const oldListener = client.webhookListeners.get(characterID);
+            if (client.webhookListeners.has(webhookID)) {
+                const oldListener = client.webhookListeners.get(webhookID);
                 client.removeListener('messageCreate', oldListener);
             }
 
-            client.webhookListeners.set(characterID, boundHandleMessageCreate);
+            client.webhookListeners.set(webhookID, boundHandleMessageCreate);
             client.on('messageCreate', boundHandleMessageCreate);
         }
 
@@ -77,11 +49,87 @@ async function loadWebhooks(client, createClientCAI) {
 }
 
 
+async function saveWebhook(client, webhookName, webhookData, characterID, options, serverID, channelID, listenerID) {
+    try {
+        let webhook = await CharacterModel.findOne({ username: webhookName });
+
+        if (webhook) {
+            webhook.id = webhookData.id;
+            webhook.token = webhookData.token;
+            webhook.characterID = characterID;
+            webhook.options = options; 
+            webhook.serverID = serverID;
+            webhook.channelID = channelID;
+            webhook.listenerID = listenerID;
+        } else {
+            webhook = new CharacterModel({
+                username: webhookName,
+                id: webhookData.id,
+                token: webhookData.token,
+                characterID,
+                options, 
+                serverID,
+                channelID,
+                listenerID
+            });
+        }
+
+        await webhook.save();
+        console.log('Webhook saved:', webhook);
+
+        // === Only attach this newly saved webhook ===
+
+        const clientCAI = new CAINode();
+        webhook.clientCAI = clientCAI;
+
+        await clientCAI.login(process.env.CAI_AUTH_TOKEN);
+
+        if (clientCAI.character.connect) {
+            await clientCAI.character.connect(characterID);
+        } else {
+            console.error('clientCAI.character.connect is not defined');
+        }
+
+        const boundHandleMessageCreate = (msg) => handleMessageCreate(msg, webhook);
+
+        if (!client.webhookListeners) {
+            client.webhookListeners = new Map();
+        }
+
+        if (client.webhookListeners.has(listenerID)) {
+            const oldListener = client.webhookListeners.get(listenerID);
+            client.removeListener('messageCreate', oldListener);
+        }
+
+        client.webhookListeners.set(listenerID, boundHandleMessageCreate);
+        client.on('messageCreate', boundHandleMessageCreate);
+
+    } catch (error) {
+        console.error('Error saving webhook:', error);
+    }
+}
+
+
+
+
+
+
 async function removeWebhook(client, identifier) {
+    if (!identifier) {
+        console.error("removeWebhook called without identifier");
+        return null;
+    }
+
     try {
         const webhook = await CharacterModel.findOneAndDelete({
             $or: [{ id: identifier }, { username: identifier }]
         });
+
+        console.log("Looking for webhook with identifier:", identifier);
+
+        if (!client.webhookListeners) {
+            client.webhookListeners = new Map();
+        }
 
         if (webhook) {
             const { listenerID } = webhook;
