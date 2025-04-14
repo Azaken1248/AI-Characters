@@ -6,45 +6,51 @@ const processingFlags = new Map();
 const RATE_LIMIT_MS = 2000;
 
 async function handleMessageCreate(msg, webhook) {
-    if (messageQueues.get(webhook.characterID)?.some(entry => entry.msg.id === msg.id)) {
-        console.log(`⚠️ Duplicate message blocked: ${msg.id}`);
-        return;
-      }
-      
+    if (messageQueues.get(webhook.characterID)?.some(e => e.msg.id === msg.id)) {
+      console.log(`⚠️ Duplicate message blocked: ${msg.id}`);
+      return;
+    }
+  
     console.log(`[${webhook.characterID}] 📥 Received Discord message: ${msg.content}`);
-
-    let check = false;
-
-    if(msg.webhookId == webhook.id){
-        return
+  
+    if (msg.webhookId === webhook.id) {
+      return;
     }
-
-    if (webhook.options.ignoreBots) {
-        check = msg.author.bot;
-    } else if (webhook.options.onlySelfWebhook) {
-        check = msg.webhookId && msg.webhookId === webhook.id;
+  
+    if (msg.content.startsWith('!')) {
+      return;
     }
-
-    if (check || msg.content.startsWith("!")) {
-        return;
+  
+    if (webhook.options.ignoreBots && msg.author.bot && !msg.webhookId) {
+      console.log(`[${webhook.characterID}] 🚫 Ignoring bot message: ${msg.author.tag}`);
+      return;
     }
-
+  
+    if (webhook.options.onlySelfWebhook && msg.webhookId !== webhook.id) {
+      console.log(
+        `[${webhook.characterID}] 🚫 onlySelfWebhook is on; ignoring webhook ${msg.webhookId}`
+      );
+      return;
+    }
+  
     if (!messageQueues.has(webhook.characterID)) {
-        messageQueues.set(webhook.characterID, []);
-        processingFlags.set(webhook.characterID, false);
+      messageQueues.set(webhook.characterID, []);
+      processingFlags.set(webhook.characterID, false);
     }
-
+  
     const queue = messageQueues.get(webhook.characterID);
     const token = queue.length + 1;
     queue.push({ msg, token });
-
+  
     console.log(`[${webhook.characterID}] 📨 Queued msg #${token}: ${msg.content}`);
-
+  
     if (!processingFlags.get(webhook.characterID)) {
-        processingFlags.set(webhook.characterID, true);
-        processQueue(webhook);
+      processingFlags.set(webhook.characterID, true);
+      processQueue(webhook);
     }
-}
+  }
+  
+
 
 async function processQueue(webhook) {
     const queue = messageQueues.get(webhook.characterID);

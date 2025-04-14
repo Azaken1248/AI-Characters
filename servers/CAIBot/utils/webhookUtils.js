@@ -12,7 +12,7 @@ async function loadWebhooks(client, _createClientCAI = null) {
         for (const webhook of webhooks) {
             const { characterID, id: webhookID } = webhook;
 
-            const clientCAI = new CAINode(); 
+            const clientCAI = new CAINode();
             webhook.clientCAI = clientCAI;
 
             try {
