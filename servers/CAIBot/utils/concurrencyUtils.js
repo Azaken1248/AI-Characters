@@ -26,12 +26,14 @@ async function handleMessageCreate(msg, webhook) {
       return;
     }
   
-    if (webhook.options.onlySelfWebhook && msg.webhookId !== webhook.id) {
-      console.log(
-        `[${webhook.characterID}] 🚫 onlySelfWebhook is on; ignoring webhook ${msg.webhookId}`
-      );
-      return;
-    }
+    if (webhook.options.onlySelfWebhook) {
+      if (msg.webhookId !== webhook.id && msg.webhookId) {
+          console.log(
+              `[${webhook.characterID}] 🚫 onlySelfWebhook is on; ignoring webhook ${msg.webhookId}`
+          );
+          return;
+      }
+  }
   
     if (!messageQueues.has(webhook.characterID)) {
       messageQueues.set(webhook.characterID, []);
